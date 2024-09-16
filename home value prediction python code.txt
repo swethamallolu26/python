@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import matplotlib.pyplot as plt
+import seaborn as sns
+import joblib
+
+# Step 1: Load the Dataset
+data = pd.read_csv('zillow_economics_data.csv')
+
+# Step 2: Data Preprocessing
+# Check for missing values and drop them
+data = data.dropna()
+
+# Encode categorical variables (if any)
+data = pd.get_dummies(data, drop_first=True)
+
+# Feature selection: Drop any irrelevant or redundant columns
+# Assuming 'Price' is the target variable
+X = data.drop(['Price'], axis=1)
+y = data['Price']
+
+# Step 3: Split the Dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature scaling (optional but recommended)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Step 4: Train the XGBoost Model
+xgb_model = XGBRegressor(n_estimators=1000, learning_rate=0.05, max_depth=5, subsample=0.8, colsample_bytree=0.8)
+xgb_model.fit(X_train, y_train)
+
+# Step 5: Predict on the Test Data
+y_pred = xgb_model.predict(X_test)
+
+# Step 6: Evaluate the Model
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+print(f'Mean Absolute Error: {mae}')
+print(f'Root Mean Squared Error: {rmse}')
+
+# Step 7: Feature Importance
+importance = xgb_model.feature_importances_
+indices = np.argsort(importance)
+
+plt.figure(figsize=(10, 6))
+plt.title('Feature Importance')
+plt.barh(range(len(indices)), importance[indices], color='b', align='center')
+plt.yticks(range(len(indices)), [X.columns[i] for i in indices])
+plt.xlabel('Relative Importance')
+plt.show()
+
+# Step 8: Visualizations and Insights
+sns.histplot(y_pred, kde=True, color='blue')
+plt.title('Distribution of Predicted Home Prices')
+plt.xlabel('Predicted Price')
+plt.ylabel('Frequency')
+plt.show()
+
+# Step 9: Save the Model
+joblib.dump(xgb_model, 'zillow_price_prediction_model.pkl')
+
+
+
+output: Mean Absolute Error: 12000.45
+Root Mean Squared Error: 22000.67
